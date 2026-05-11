@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/go-kit/kit v0.10.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.0.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mitchellh/go-homedir v1.0.0
@@ -11,6 +12,7 @@ require (
 	github.com/selvatico/go-mocket v1.0.7
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/viper v1.7.1
+	golang.org/x/crypto v0.50.0
 	gorm.io/driver/mysql v1.0.3
 	gorm.io/gorm v1.20.5
 )
@@ -81,7 +83,6 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/googleapis v1.1.0 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/mock v1.3.1 // indirect
@@ -220,7 +221,6 @@ require (
 	go.uber.org/multierr v1.3.0 // indirect
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee // indirect
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b // indirect
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect

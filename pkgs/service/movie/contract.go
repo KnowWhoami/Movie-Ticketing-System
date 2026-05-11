@@ -10,9 +10,9 @@ import (
 )
 
 type AddMovieInput struct {
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Duration    time.Duration `json:"duration"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Duration    int    `json:"duration"` // minutes
 }
 
 func (am *AddMovieInput) Validate(db *gorm.DB) error {
@@ -26,39 +26,88 @@ type AddMovieOutput struct {
 	Movie models.Movie `json:"movie"`
 }
 
+type ListMoviesInput struct {
+	Name string
+}
+
+type ListMoviesOutput struct {
+	Movies []models.Movie `json:"movies"`
+}
+
+type GetMovieByIDOutput struct {
+	Movie models.Movie `json:"movie"`
+}
+
+type UpdateMovieInput struct {
+	ID          int
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Duration    int    `json:"duration"`
+}
+
+func (u *UpdateMovieInput) Validate(db *gorm.DB) error {
+	return nil
+}
+
+type UpdateMovieOutput struct {
+	Movie models.Movie `json:"movie"`
+}
+
 type AddMovieShowInput struct {
 	MovieID        int       `json:"movie_id"`
 	CinemaScreenID int       `json:"cinema_screen_id"`
 	StartTime      time.Time `json:"start_time"`
-	EndTime        time.Time `json:"end_time"`
+	CinemaOwnerID  int       `json:"-"` // set from JWT by handler
 }
 
 func (ams *AddMovieShowInput) Validate(db *gorm.DB) error {
-	if ams.MovieID == 0 || ams.CinemaScreenID == 0 || ams.StartTime.IsZero() || ams.EndTime.IsZero() {
-		return fmt.Errorf("movie_id, cinema_screen_id, end_time, and start_time are mandatory fields")
-	}
-
-	if ams.StartTime.Sub(ams.EndTime) >= 0 {
-		return fmt.Errorf("start time must be before end time")
+	if ams.MovieID == 0 || ams.CinemaScreenID == 0 || ams.StartTime.IsZero() {
+		return fmt.Errorf("movie_id, cinema_screen_id and start_time are mandatory fields")
 	}
 	return nil
 }
 
 type AddMovieShowOutput struct {
-	Show models.MovieShow
-}
-
-type GetMovieShowInput struct {
-	ShowID int `json:"show_id"`
-}
-
-func (lms *GetMovieShowInput) Validate(db *gorm.DB) error {
-	if lms.ShowID == 0 {
-		return fmt.Errorf("show_id is mandatory fields")
-	}
-	return nil
-}
-
-type GetMovieShowOutput struct {
 	Show models.MovieShow `json:"show"`
+}
+
+type ListShowsInput struct {
+	CinemaID       int
+	CinemaScreenID int
+	MovieID        int
+}
+
+type ListShowsOutput struct {
+	Shows []models.MovieShow `json:"shows"`
+}
+
+type GetShowByIDOutput struct {
+	Show models.MovieShow `json:"show"`
+}
+
+type CancelShowInput struct {
+	ShowID        int
+	CinemaOwnerID int // set from JWT by handler
+}
+
+type CancelShowOutput struct {
+	Show models.MovieShow `json:"show"`
+}
+
+type ListShowSeatsInput struct {
+	ShowID    int
+	Type      models.SeatType
+	Available *bool // nil = all, true = available only, false = booked only
+}
+
+// ShowSeatInfo is the response shape — derives "available" from BookingID instead of exposing the raw FK.
+type ShowSeatInfo struct {
+	ID         int    `json:"id"`
+	SeatNumber int    `json:"seat_number"`
+	Type       string `json:"type"`
+	Available  bool   `json:"available"`
+}
+
+type ListShowSeatsOutput struct {
+	Seats []ShowSeatInfo `json:"seats"`
 }

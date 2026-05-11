@@ -99,15 +99,16 @@ func (s *Server) dbInit() error {
 		return err
 	}
 	s.Db = db
-	return db.AutoMigrate(&models.Booking{},
-		&models.BookingSeat{},
-		&models.Movie{},
-		&models.MovieShow{},
+	return db.AutoMigrate(
 		&models.User{},
 		&models.City{},
 		&models.Cinema{},
 		&models.CinemaScreen{},
 		&models.CinemaSeat{},
+		&models.Movie{},
+		&models.MovieShow{},
+		&models.MovieShowSeat{},
+		&models.Booking{},
 	)
 
 }

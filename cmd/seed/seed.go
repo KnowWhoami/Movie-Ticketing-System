@@ -84,7 +84,7 @@ func seedUsers(db *gorm.DB) error {
 			Name:     "Joy",
 			Email:    "joy@example.com",
 			Password: auth.HashPassword("password123"),
-			UserType: models.UserTypeTheatreOwner,
+			UserType: models.UserTypeCinemaOwner,
 		},
 		{
 			Name:     "Alice",
@@ -220,22 +220,22 @@ func seedMovies(db *gorm.DB) error {
 		{
 			Name:        "Inception",
 			Description: "A thief who steals corporate secrets through dream-sharing technology.",
-			Duration:    148 * time.Minute,
+			Duration:    148,
 		},
 		{
 			Name:        "The Dark Knight",
 			Description: "Batman faces the Joker, a criminal mastermind who plunges Gotham into anarchy.",
-			Duration:    152 * time.Minute,
+			Duration:    152,
 		},
 		{
 			Name:        "Interstellar",
 			Description: "A team of explorers travel through a wormhole in space to ensure humanity's survival.",
-			Duration:    169 * time.Minute,
+			Duration:    169,
 		},
 		{
 			Name:        "Avengers: Endgame",
 			Description: "The Avengers assemble once more to reverse Thanos's actions and restore order to the universe.",
-			Duration:    181 * time.Minute,
+			Duration:    181,
 		},
 	}
 	for i := range movies {
@@ -295,7 +295,7 @@ func seedShows(db *gorm.DB) error {
 		screen := screenMap[s.screenKey]
 		movie := movieMap[s.movieName]
 		start := base.Add(time.Duration(s.startHour) * time.Hour)
-		end := start.Add(movie.Duration)
+		end := start.Add(time.Duration(movie.Duration) * time.Minute)
 
 		var existing models.MovieShow
 		if err := db.Where("cinema_screen_id = ? AND start_time = ?", screen.ID, start).First(&existing).Error; err == nil {

@@ -1,36 +1,30 @@
 package models
 
 import (
-	"database/sql"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
 type BookingStatus string
-type SeatStatus string
 
 const (
 	BookingConfirmed BookingStatus = "CONFIRMED"
 	BookingCancelled BookingStatus = "CANCELLED"
 	BookingFailed    BookingStatus = "FAILED"
 	BookingPending   BookingStatus = "PENDING"
-
-	SeatAvailable SeatStatus = "AVAILABLE"
-	SeatBooked    SeatStatus = "BOOKED"
 )
 
 type Booking struct {
 	Model
-	SeatCount int           `json:"seat_count"`
-	Status    BookingStatus `json:"status"`
+	Status BookingStatus `json:"status"`
 
 	// relations
-	UserID      int           `json:"-"`
-	User        User          `json:"user"`
-	MovieShowID int           `json:"-"`
-	MovieShow   MovieShow     `json:"movie_show"`
-	Seats       []BookingSeat `json:"seats" gorm:"foreignKey:BookingID"`
+	UserID      int        `json:"-"`
+	User        User       `json:"user"`
+	MovieShowID int        `json:"-"`
+	MovieShow   MovieShow  `json:"movie_show"`
+	Seats       []MovieShowSeat `json:"seats" gorm:"foreignKey:BookingID"`
 }
 
 func (b *Booking) BeforeSave(db *gorm.DB) (err error) {
@@ -38,34 +32,27 @@ func (b *Booking) BeforeSave(db *gorm.DB) (err error) {
 	return
 }
 
-// TODO: Break into smaller logical methods
-func (b *Booking) BookSeats(db *gorm.DB, seatNumbers []int, seatType SeatType) error {
-	var seats []int
-	result := db.Model(&CinemaSeat{}).
-		Where("cinema_screen_id = ? AND seat_number IN ? AND type = ? ", b.MovieShow.CinemaScreenID, seatNumbers, seatType).
-		Pluck("ID", &seats)
+// BookSeats claims the given show_seat IDs for this booking.
+// Uses a conditional UPDATE so concurrent requests race on the DB constraint.
+func (b *Booking) BookSeats(db *gorm.DB, showSeatIDs []int) error {
+	result := db.Model(&MovieShowSeat{}).
+		Where("id IN ? AND booking_id IS NULL", showSeatIDs).
+		Update("booking_id", b.ID)
 
-	if len(seatNumbers) != len(seats) {
-		return fmt.Errorf("%d seat numbers are invalid in the list: %v", len(seatNumbers)-len(seats), seatNumbers)
+	if result.Error != nil {
+		return result.Error
 	}
 
-	result = db.Model(BookingSeat{}).
-		Where("cinema_seat_id IN ?", seats).
-		Where("status = ? ", SeatAvailable).
-		Where("movie_show_id = ? ", b.MovieShow.ID).
-		Updates(map[string]interface{}{"status": SeatBooked, "booking_id": b.ID})
-
-	if result.RowsAffected != int64(len(seats)) {
-		errorMsg := "race condition while booking, some seats got booked already"
-		revert := db.Model(BookingSeat{}).
-			Where("cinema_seat_id IN ?", seats).
-			Where("status = ?", SeatBooked).
-			Where("booking_id = ?", b.ID).
-			Updates(map[string]interface{}{"status": SeatAvailable, "booking_id": 0})
+	if result.RowsAffected != int64(len(showSeatIDs)) {
+		// revert any seats that were successfully claimed in this attempt
+		revert := db.Model(&MovieShowSeat{}).
+			Where("id IN ? AND booking_id = ?", showSeatIDs, b.ID).
+			Update("booking_id", nil)
+		errMsg := "some seats are already booked"
 		if revert.Error != nil {
-			errorMsg += "Error, while reverting, " + revert.Error.Error()
+			errMsg += ": revert error: " + revert.Error.Error()
 		}
-		return fmt.Errorf("%s", errorMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 	return nil
 }
@@ -84,17 +71,4 @@ func (b *Booking) Confirm() error {
 	}
 	b.Status = BookingConfirmed
 	return nil
-}
-
-type BookingSeat struct {
-	Model
-	Status       SeatStatus    `json:"status"`
-	MovieShowID  int           `json:"-" gorm:"index:unique_seat_per_show,unique"`
-	CinemaSeatID int           `json:"-" gorm:"index:unique_seat_per_show,unique"`
-	BookingID    sql.NullInt64 `json:"-"`
-
-	// relations
-	MovieShow  MovieShow  `json:"-"`
-	CinemaSeat CinemaSeat `json:"cinema_seat"`
-	Booking    Booking    `json:"-"`
 }

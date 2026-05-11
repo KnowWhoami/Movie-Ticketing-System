@@ -11,7 +11,9 @@ import (
 	jsonHelper "KnowWhoami/movie-ticketing/internal/json"
 	"KnowWhoami/movie-ticketing/pkgs/service/booking"
 	"KnowWhoami/movie-ticketing/pkgs/service/cinema"
+	"KnowWhoami/movie-ticketing/pkgs/service/city"
 	"KnowWhoami/movie-ticketing/pkgs/service/movie"
+	userSvc "KnowWhoami/movie-ticketing/pkgs/service/user"
 )
 
 type Handler struct {
@@ -23,9 +25,11 @@ type Handler struct {
 }
 
 type HandlerServices struct {
+	city    *city.Service
 	cinema  *cinema.Service
 	movie   *movie.Service
 	booking *booking.Service
+	user    *userSvc.Service
 }
 
 func NewAPIHandler(db *gorm.DB, logger log.Logger) *Handler {
@@ -33,12 +37,16 @@ func NewAPIHandler(db *gorm.DB, logger log.Logger) *Handler {
 		db:     db,
 		logger: logger,
 		svc: &HandlerServices{
+			city: city.NewService(db,
+				log.With(logger, "service", "city")),
 			cinema: cinema.NewService(db,
 				cache.NewCache(cache.InMemoryCache), log.With(logger, "service", "cinema")),
 			movie: movie.NewService(db,
 				cache.NewCache(cache.InMemoryCache), log.With(logger, "service", "movie")),
 			booking: booking.NewService(db,
 				cache.NewCache(cache.InMemoryCache), log.With(logger, "service", "booking")),
+			user: userSvc.NewService(db,
+				log.With(logger, "service", "user")),
 		},
 	}
 }

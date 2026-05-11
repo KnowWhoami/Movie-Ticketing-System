@@ -44,6 +44,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file, default is ~/.ticketing.yaml")
 	// register your commands here
 	server.Init(&server.CMD{RootCmd: rootCmd, Logger: Logger})
+	seed.Init(&seed.CMD{RootCmd: rootCmd, Logger: Logger})
 }
 
 func initLogger() {

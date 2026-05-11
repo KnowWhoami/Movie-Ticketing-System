@@ -8,39 +8,32 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// Movie: the table that stores all the movies
 type Movie struct {
 	Model
-
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Duration    time.Duration `json:"duration"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Duration    int    `json:"duration"` // minutes
 
 	// relations
 	MovieShows []MovieShow `json:"shows" gorm:"foreignKey:MovieID"`
 }
 
-// MovieShows: each screening of a movie
 type MovieShow struct {
 	Model
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
+	StartTime   time.Time `json:"start_time"`
+	EndTime     time.Time `json:"end_time"`
+	IsCancelled bool      `json:"is_cancelled" gorm:"default:false"`
 
 	// relations
 	CinemaScreenID int `json:"-"`
 	MovieID        int `json:"-"`
 	CinemaScreen   CinemaScreen
 	Movie          Movie
-	Bookings       []Booking     `json:"bookings" gorm:"foreignKey:MovieShowID"`
-	Seats          []BookingSeat `json:"seats" gorm:"foreignKey:MovieShowID"`
+	Bookings       []Booking `json:"bookings" gorm:"foreignKey:MovieShowID"`
 }
 
-// check if show is valid
 func (ms *MovieShow) BeforeCreate(db *gorm.DB) (err error) {
-	if err := ms.CheckOverlap(db); err != nil {
-		return err
-	}
-	return nil
+	return ms.CheckOverlap(db)
 }
 
 func (ms *MovieShow) CheckOverlap(db *gorm.DB) error {
@@ -62,28 +55,34 @@ func (ms *MovieShow) CheckOverlap(db *gorm.DB) error {
 	return nil
 }
 
-// generate seats
-func (ms *MovieShow) AfterCreate(db *gorm.DB) (err error) {
-	if err := ms.GenerateShowSeats(db); err != nil {
-		return err
-	}
-	return nil
+func (ms *MovieShow) AfterCreate(db *gorm.DB) error {
+	return ms.GenerateShowSeats(db)
 }
 
 func (ms *MovieShow) GenerateShowSeats(db *gorm.DB) error {
 	var seats []*CinemaSeat
-	result := db.Where("cinema_screen_id = ?", ms.CinemaScreenID).Find(&seats)
+	if err := db.Where("cinema_screen_id = ?", ms.CinemaScreenID).Find(&seats).Error; err != nil {
+		return err
+	}
 
-	var showSeats []*BookingSeat
-	for _, seat := range seats {
-		showSeats = append(showSeats, &BookingSeat{
-			Status:       SeatAvailable,
+	showSeats := make([]*MovieShowSeat, len(seats))
+	for i, seat := range seats {
+		showSeats[i] = &MovieShowSeat{
 			MovieShowID:  ms.ID,
 			CinemaSeatID: seat.ID,
-		})
+		}
 	}
-	if result = db.Create(showSeats); result.Error != nil {
-		return result.Error
-	}
-	return nil
+	return db.Create(showSeats).Error
+}
+
+type MovieShowSeat struct {
+	Model
+	MovieShowID  int  `json:"-" gorm:"uniqueIndex:unique_seat_per_show"`
+	CinemaSeatID int  `json:"-" gorm:"uniqueIndex:unique_seat_per_show"`
+	BookingID    *int `json:"-"`
+
+	// relations
+	MovieShow  MovieShow  `json:"-"`
+	CinemaSeat CinemaSeat `json:"cinema_seat"`
+	Booking    *Booking   `json:"-"`
 }

@@ -17,15 +17,16 @@ func SetupDB() *gorm.DB {
 		fmt.Println("error connecting to DB: ", err.Error())
 		os.Exit(1)
 	}
-	_ = db.AutoMigrate(&models.Booking{},
-		&models.BookingSeat{},
-		&models.Movie{},
-		&models.MovieShow{},
+	_ = db.AutoMigrate(
 		&models.User{},
 		&models.City{},
 		&models.Cinema{},
 		&models.CinemaScreen{},
 		&models.CinemaSeat{},
+		&models.Movie{},
+		&models.MovieShow{},
+		&models.MovieShowSeat{},
+		&models.Booking{},
 	)
 	return db
 }
@@ -33,7 +34,7 @@ func SetupDB() *gorm.DB {
 // CleanupDB truncates all tables in dependency order so each test starts clean.
 func CleanupDB(db *gorm.DB) {
 	db.Exec("SET FOREIGN_KEY_CHECKS=0")
-	db.Exec("TRUNCATE TABLE booking_seats")
+	db.Exec("TRUNCATE TABLE movie_show_seats")
 	db.Exec("TRUNCATE TABLE bookings")
 	db.Exec("TRUNCATE TABLE movie_shows")
 	db.Exec("TRUNCATE TABLE movies")

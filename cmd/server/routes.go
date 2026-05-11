@@ -8,8 +8,9 @@ import (
 
 func (s *Server) setupRoutes() {
 	apiHandler := api.NewAPIHandler(s.Db, s.Logger)
-	theatreOwnerOnly := api.RequireRole(models.UserTypeTheatreOwner)
-	regularOnly := api.RequireRole(models.UserTypeRegular)
+	adminOnly := api.RequireRole(models.UserTypeAdmin)
+	theatreOwnerOnly := api.RequireRole(models.UserTypeCinemaOwner)
+	ownerOrAdmin := api.RequireRole(models.UserTypeAdmin, models.UserTypeCinemaOwner)
 	s.Routes = []server.Route{
 		{
 			Method:  "GET",
@@ -27,6 +28,43 @@ func (s *Server) setupRoutes() {
 			Path:    "/login",
 			Handler: wrapHandler(apiHandler.Login),
 		},
+		// user management routes
+		{
+			Method:  "POST",
+			Path:    "/user",
+			Handler: adminOnly(wrapHandler(apiHandler.CreateUser)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/users",
+			Handler: adminOnly(wrapHandler(apiHandler.ListUsers)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/user/:id",
+			Handler: adminOnly(wrapHandler(apiHandler.GetUserByID)),
+		},
+		{
+			Method:  "PATCH",
+			Path:    "/user/:id",
+			Handler: adminOnly(wrapHandler(apiHandler.UpdateUser)),
+		},
+		{
+			Method:  "DELETE",
+			Path:    "/user/:id",
+			Handler: adminOnly(wrapHandler(apiHandler.DeleteUser)),
+		},
+		// city routes
+		{
+			Method:  "POST",
+			Path:    "/city",
+			Handler: adminOnly(wrapHandler(apiHandler.AddCity)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/cities",
+			Handler: wrapHandler(apiHandler.ListCities),
+		},
 		// cinema routes
 		{
 			Method:  "GET",
@@ -34,41 +72,112 @@ func (s *Server) setupRoutes() {
 			Handler: wrapHandler(apiHandler.ListCinemas),
 		},
 		{
+			Method:  "GET",
+			Path:    "/cinemas/:cinema_owner_id",
+			Handler: adminOnly(wrapHandler(apiHandler.GetCinemasByOwnerID)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/cinema/:id",
+			Handler: wrapHandler(apiHandler.GetCinemaByID),
+		},
+		{
+			Method:  "GET",
+			Path:    "/my-cinemas",
+			Handler: theatreOwnerOnly(wrapHandler(apiHandler.GetMyCinemas)),
+		},
+		{
 			Method:  "POST",
 			Path:    "/cinema",
-			Handler: theatreOwnerOnly(wrapHandler(apiHandler.AddCinema)),
+			Handler: adminOnly(wrapHandler(apiHandler.AddCinema)),
+		},
+		{
+			Method:  "PATCH",
+			Path:    "/cinema/:id",
+			Handler: adminOnly(wrapHandler(apiHandler.UpdateCinema)),
 		},
 		{
 			Method:  "POST",
 			Path:    "/screen",
 			Handler: theatreOwnerOnly(wrapHandler(apiHandler.AddCinemaScreen)),
 		},
-		// movie routes
 		{
 			Method:  "GET",
-			Path:    "/show",
-			Handler: wrapHandler(apiHandler.GetShow),
+			Path:    "/screens",
+			Handler: wrapHandler(apiHandler.ListScreens),
 		},
+		{
+			Method:  "GET",
+			Path:    "/screens/:screen_id/seats",
+			Handler: wrapHandler(apiHandler.ListSeats),
+		},
+		{
+			Method:  "GET",
+			Path:    "/screens/:screen_id/seats/:seat_number",
+			Handler: wrapHandler(apiHandler.GetSeatByNumber),
+		},
+		// movie routes
+		{
+			Method:  "POST",
+			Path:    "/movie",
+			Handler: adminOnly(wrapHandler(apiHandler.AddMovie)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/movies",
+			Handler: wrapHandler(apiHandler.ListMovies),
+		},
+		{
+			Method:  "GET",
+			Path:    "/movie/:id",
+			Handler: wrapHandler(apiHandler.GetMovieByID),
+		},
+		{
+			Method:  "PATCH",
+			Path:    "/movie/:id",
+			Handler: adminOnly(wrapHandler(apiHandler.UpdateMovie)),
+		},
+		// show routes
 		{
 			Method:  "POST",
 			Path:    "/show",
 			Handler: theatreOwnerOnly(wrapHandler(apiHandler.AddShow)),
 		},
 		{
-			Method:  "POST",
-			Path:    "/movie",
-			Handler: theatreOwnerOnly(wrapHandler(apiHandler.AddMovie)),
+			Method:  "GET",
+			Path:    "/shows",
+			Handler: wrapHandler(apiHandler.ListShows),
+		},
+		{
+			Method:  "GET",
+			Path:    "/show/:id",
+			Handler: wrapHandler(apiHandler.GetShowByID),
+		},
+		{
+			Method:  "GET",
+			Path:    "/show/:id/seats",
+			Handler: wrapHandler(apiHandler.ListShowSeats),
+		},
+		{
+			Method:  "PATCH",
+			Path:    "/show/:id/cancel",
+			Handler: theatreOwnerOnly(wrapHandler(apiHandler.CancelShow)),
 		},
 		// booking related routes
 		{
 			Method:  "GET",
 			Path:    "/bookings",
-			Handler: wrapHandler(apiHandler.ListBookings),
+			Handler: ownerOrAdmin(wrapHandler(apiHandler.ListBookings)),
+		},
+		{
+			Method:  "GET",
+			Path:    "/my-bookings",
+			Handler: api.AuthMiddleware(wrapHandler(apiHandler.ListMyBookings)),
 		},
 		{
 			Method:  "POST",
-			Path:    "/book",
-			Handler: regularOnly(wrapHandler(apiHandler.BookSeats)),
+			Path:    "/booking",
+			Handler: api.AuthMiddleware(wrapHandler(apiHandler.BookSeats)),
 		},
 	}
 }

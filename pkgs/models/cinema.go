@@ -9,42 +9,40 @@ const (
 	Balcony  SeatType = "BALCONY"
 )
 
-// TODO: add unique index on ZIP Code
 type City struct {
 	Model
 	Name    string `json:"name"`
 	ZipCode string `json:"zip_code"`
 }
 
-// Cinema: a cinema hall or a multiplex
 type Cinema struct {
 	Model
 	Name string `json:"name"`
 
 	// relations
+	CinemaOwnerID int            `json:"-"`
+	CinemaOwner   User           `json:"cinema_owner"`
 	CinemaScreens []CinemaScreen `json:"screens" gorm:"foreignkey:CinemaID"`
 	CityID        int            `json:"-"`
 	City          City           `json:"city"`
 }
 
-// CinemaScreen: cinema screen which denotes a specific screen on the of Cinema
 type CinemaScreen struct {
 	Model
-	Name string `json:"name"`
+	Name string `json:"name" gorm:"uniqueIndex:unique_screen_per_cinema"`
 
 	// relations
-	CinemaID    int          `json:"-"`
+	CinemaID    int          `json:"-" gorm:"uniqueIndex:unique_screen_per_cinema"`
 	Cinema      Cinema       `json:"-"`
 	CinemaSeats []CinemaSeat `json:"seats" gorm:"foreignkey:CinemaScreenID"`
 }
 
-// CinemaSeat: all the seats in a cinema screen
 type CinemaSeat struct {
 	Model
-	SeatNumber int      `json:"seat_number" gorm:"index:unique_seat_per_cinema_screen_and_type,unique"`
-	Type       SeatType `json:"type" gorm:"index:unique_seat_per_cinema_screen_and_type,unique"`
+	SeatNumber int      `json:"seat_number" gorm:"uniqueIndex:unique_seat_per_screen"`
+	Type       SeatType `json:"type"`
 
 	// relations
-	CinemaScreenID int          `json:"-" gorm:"index:unique_seat_per_cinema_screen_and_type,unique"`
+	CinemaScreenID int          `json:"-" gorm:"uniqueIndex:unique_seat_per_screen"`
 	CinemaScreen   CinemaScreen `json:"-"`
 }

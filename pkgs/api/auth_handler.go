@@ -16,10 +16,9 @@ type contextKey int
 const tokenPayloadKey contextKey = 0
 
 type registerInput struct {
-	Name     string          `json:"name"`
-	Email    string          `json:"email"`
-	Password string          `json:"password"`
-	UserType models.UserType `json:"user_type"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type loginInput struct {
@@ -51,15 +50,11 @@ func (h *Handler) Register(request *http.Request, writer http.ResponseWriter) {
 		return
 	}
 
-	if inp.UserType == "" {
-		inp.UserType = models.UserTypeRegular
-	}
-
 	user := models.User{
 		Name:     inp.Name,
 		Email:    inp.Email,
 		Password: auth.HashPassword(inp.Password),
-		UserType: inp.UserType,
+		UserType: models.UserTypeRegular,
 	}
 
 	if result := h.db.Create(&user); result.Error != nil {

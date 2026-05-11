@@ -9,24 +9,32 @@ import (
 )
 
 type BookSeatsInput struct {
-	ShowID      int             `json:"show_id"`
-	SeatNumbers []int           `json:"seat_numbers"`
-	UserID      int             `json:"user_id"`
-	SeatType    models.SeatType `json:"seat_type"`
+	MovieShowID int   `json:"movie_show_id"`
+	ShowSeatIDs []int `json:"show_seat_ids"`
+	UserID      int   `json:"-"` // set from JWT by handler
 }
 
-func (bs *BookSeatsInput) Validate(db *gorm.DB) error {
-	if bs.ShowID == 0 || bs.UserID == 0 || bs.SeatNumbers == nil || bs.SeatType == "" {
-		return fmt.Errorf("show_id, seat_numbers, seat_type and user_id are required parameters")
+func (b *BookSeatsInput) Validate(db *gorm.DB) error {
+	if b.MovieShowID == 0 {
+		return fmt.Errorf("movie_show_id is required")
 	}
-
+	if len(b.ShowSeatIDs) == 0 {
+		return fmt.Errorf("show_seat_ids must not be empty")
+	}
 	var show models.MovieShow
-	var user models.User
-	if result := db.Find(&show, bs.ShowID); result.Error != nil {
-		return result.Error
+	if err := db.First(&show, b.MovieShowID).Error; err != nil {
+		return fmt.Errorf("show not found")
 	}
-	if result := db.Find(&user, bs.UserID); result.Error != nil {
-		return result.Error
+	if show.IsCancelled {
+		return fmt.Errorf("show has been cancelled")
+	}
+	// verify every seat ID belongs to this show
+	var count int64
+	db.Model(&models.MovieShowSeat{}).
+		Where("id IN ? AND movie_show_id = ?", b.ShowSeatIDs, b.MovieShowID).
+		Count(&count)
+	if int(count) != len(b.ShowSeatIDs) {
+		return fmt.Errorf("one or more seat IDs do not belong to this show")
 	}
 	return nil
 }
@@ -35,6 +43,17 @@ type BookSeatsOutput struct {
 	Booking models.Booking `json:"booking"`
 }
 
+type ListBookingsInput struct {
+	MovieShowID int
+	UserID      int
+	CallerID    int
+	CallerType  models.UserType
+}
+
 type ListBookingsOutput struct {
+	Bookings []models.Booking `json:"bookings"`
+}
+
+type ListMyBookingsOutput struct {
 	Bookings []models.Booking `json:"bookings"`
 }
